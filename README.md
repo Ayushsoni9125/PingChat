@@ -24,12 +24,35 @@ I built this project purely for learning purposes. I wanted to understand:
 - **HTML + CSS** — Frontend UI
 - **Vanilla JavaScript** — Client-side WebSocket handling
 
-## Run Locally
+## Getting Started
+
+Anyone can run this project locally by following these steps:
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Ayushsoni9125/PingChat.git
+```
+
+### 2. Navigate into the project folder
+
+```bash
+cd PingChat
+```
+
+### 3. Install dependencies
 
 ```bash
 npm install
+```
+
+### 4. Start the server
+
+```bash
 node server.js
 ```
 
-Then open [http://localhost:9000](http://localhost:9000) in your browser.  
+### 5. Open in browser
+
+Go to [http://localhost:9000](http://localhost:9000) in your browser.  
 Open multiple tabs to simulate multiple users chatting in real time!
