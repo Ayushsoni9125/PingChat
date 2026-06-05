@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiveChat — WebSocket</title>
+  <meta name="description" content="A real-time chat application powered by WebSockets">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="chat-window">
+    <!-- Header -->
+    <header class="chat-header">
+      <div class="avatar">💬</div>
+      <div class="header-info">
+        <div class="header-title">LiveChat</div>
+        <div class="header-status">
+          <span class="status-dot"></span>
+          <span id="status-label">Connected</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" title="Info">ℹ️</button>
+      </div>
+    </header>
+
+    <!-- Messages -->
+    <ul id="messages-container">
+      <li class="empty-state" id="empty-state">
+        <span class="empty-icon">👋</span>
+        <p>Say something to get started!</p>
+      </li>
+    </ul>
+
+    <!-- Footer / Input -->
+    <footer class="chat-footer">
+      <div class="input-row">
+        <input
+          type="text"
+          id="message-input"
+          placeholder="Type a message…"
+          autocomplete="off"
+        />
+        <button id="message-send-button" title="Send">
+          <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const messageInput     = document.getElementById('message-input');
+    const messageSendButton = document.getElementById('message-send-button');
+    const messagesContainer = document.getElementById('messages-container');
+    const emptyState        = document.getElementById('empty-state');
+    const statusLabel       = document.getElementById('status-label');
+
+    const { port } = window.location;
+    const connection = new WebSocket(`ws://localhost:${port}`);
+
+    // Track whether we sent the latest message (simple heuristic: own tab)
+    let myMessages = new Set();
+
+    function getTime() {
+      return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function addMessage(text, isSent = false) {
+      if (emptyState) emptyState.style.display = 'none';
+
+      const li = document.createElement('li');
+      li.classList.add('message-item', isSent ? 'sent' : 'received');
+
+      const bubble = document.createElement('div');
+      bubble.classList.add('bubble');
+      bubble.textContent = text;
+
+      const ts = document.createElement('span');
+      ts.classList.add('timestamp');
+      ts.textContent = getTime();
+      bubble.appendChild(ts);
+
+      li.appendChild(bubble);
+      messagesContainer.appendChild(li);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function sendMessage() {
+      const value = messageInput.value.trim();
+      if (!value) return;
+
+      // Track that this message came from us so the echo appears as "sent"
+      myMessages.add(value + '_' + Date.now().toString().slice(0, -3));
+      connection.send(JSON.stringify({ message: value }));
+      messageInput.value = '';
+    }
+
+    connection.onopen = () => {
+      statusLabel.textContent = 'Connected';
+
+      connection.onmessage = (message) => {
+        const rawData = message.data;
+        const parsedData = JSON.parse(rawData);
+        const text = parsedData.message;
+
+        // Heuristic: if it was just typed, treat as sent (echo)
+        const isSent = myMessages.size > 0 && (() => {
+          for (let key of myMessages) {
+            if (key.startsWith(text + '_')) {
+              myMessages.delete(key);
+              return true;
+            }
+          }
+          return false;
+        })();
+
+        addMessage(text, isSent);
+      };
+
+      messageSendButton.addEventListener('click', sendMessage);
+
+      messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+    };
+
+    connection.onerror = () => {
+      statusLabel.textContent = 'Error';
+    };
+
+    connection.onclose = () => {
+      statusLabel.textContent = 'Disconnected';
+    };
+  </script>
+
+</body>
+</html>
